@@ -71,8 +71,10 @@
         <div class="numwrap"><input type="number" id="mealCount" min="1" max="8" style="width:90px;"></div>
       </div>
       <button class="btn btn-teal" id="splitBtn">Разделить поровну</button>
+      <button class="btn btn-gold" id="shareBtn">⤴ Поделиться</button>
     </div>
     <div id="dayTotals" style="margin-top:14px; font-size:13px; color:#6B6A5E;"></div>
+    <div id="shareStatus" style="margin-top:6px; font-size:13px; color:#2C5F5D;"></div>
   </div>
 
   <div id="meals"></div>
@@ -206,6 +208,54 @@ function wireNumInput(el, getValue, onCommit){
       e.target.value = String(getValue() ?? 0);
     }
   });
+}
+
+// ---------- export / share ----------
+function buildShareText(){
+  let lines = [];
+  lines.push(`Раскладка на день (${dayKcal} ккал / ${dayProtein} г белка)`);
+  lines.push('');
+  let kcalSum=0, pSum=0, cSum=0;
+  meals.forEach(meal=>{
+    const r = computeMeal(meal);
+    kcalSum += r.totalKcal; pSum += r.totalP; cSum += r.totalC;
+    lines.push(`${meal.label} (цель ${meal.targetKcal} ккал / ${meal.targetProtein} г белка)`);
+    if (meal.items.length === 0){
+      lines.push('  — пусто —');
+    } else {
+      meal.items.forEach(it=>{
+        const food = findFood(it.foodId);
+        if (!food) return;
+        const unit = food.perUnit ? 'шт' : 'г';
+        lines.push(`  - ${food.name}: ${it.amount} ${unit}`);
+      });
+    }
+    lines.push(`  Итого: ${round(r.totalKcal)} ккал · ${round(r.totalP,1)} г белка · ${round(r.totalC,1)} г углеводов`);
+    lines.push('');
+  });
+  lines.push(`Итого за день: ${round(kcalSum)} ккал · ${round(pSum,1)} г белка · ${round(cSum,1)} г углеводов`);
+  return lines.join('\n');
+}
+
+async function shareOrCopy(){
+  const text = buildShareText();
+  const statusEl = document.getElementById('shareStatus');
+  if (navigator.share){
+    try {
+      await navigator.share({ text, title: 'Раскладка на день' });
+      return;
+    } catch(e){
+      // user cancelled or share failed — fall through to clipboard
+      if (e && e.name === 'AbortError') return;
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    statusEl.textContent = '✓ скопировано в буфер обмена';
+    setTimeout(()=>{ if (statusEl.textContent === '✓ скопировано в буфер обмена') statusEl.textContent=''; }, 2500);
+  } catch(e){
+    statusEl.textContent = 'Не получилось скопировать — выделите текст вручную';
+  }
 }
 
 // ---------- rendering ----------
@@ -399,6 +449,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
     meals.forEach(m=>{ m.targetKcal = perKcal; m.targetProtein = perP; });
     saveMeals(); renderMeals();
   });
+
+  document.getElementById('shareBtn').addEventListener('click', shareOrCopy);
 
   document.getElementById('toggleAddFood').addEventListener('click', ()=>{
     const f = document.getElementById('addFoodForm');
