@@ -72,6 +72,7 @@
       </div>
       <button class="btn btn-teal" id="splitBtn">Разделить поровну</button>
       <button class="btn btn-gold" id="shareBtn">⤴ Поделиться</button>
+      <button class="btn btn-link" id="resetAllBtn">↺ Сбросить всё</button>
     </div>
     <div id="dayTotals" style="margin-top:14px; font-size:13px; color:#6B6A5E;"></div>
     <div id="shareStatus" style="margin-top:6px; font-size:13px; color:#2C5F5D;"></div>
@@ -451,6 +452,22 @@ document.addEventListener('DOMContentLoaded', ()=>{
   });
 
   document.getElementById('shareBtn').addEventListener('click', shareOrCopy);
+
+  document.getElementById('resetAllBtn').addEventListener('click', ()=>{
+    const ok = confirm('Сбросить все приёмы пищи, граммовки и дневные цели? Список продуктов при этом не тронется.');
+    if (!ok) return;
+    try {
+      localStorage.removeItem(MEALS_KEY);
+      localStorage.removeItem(DAY_KEY);
+    } catch(e){}
+    dayKcal = 2600; dayProtein = 100; mealCount = 4;
+    document.getElementById('dayKcal').value = dayKcal;
+    document.getElementById('dayProtein').value = dayProtein;
+    document.getElementById('mealCount').value = mealCount;
+    meals = [];
+    initMeals();
+    renderMeals();
+  });
 
   document.getElementById('toggleAddFood').addEventListener('click', ()=>{
     const f = document.getElementById('addFoodForm');
