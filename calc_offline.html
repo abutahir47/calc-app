@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Калькулятор порций</title>
+<!-- PWA: делает приложение полноэкранным при добавлении на домашний экран iPhone -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Калькулятор">
+<link rel="apple-touch-icon" href="icon.png">
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; background:#F2F0E6; color:#2E2E27; font-family: 'Segoe UI', system-ui, sans-serif; }
+  .disp { font-family: Georgia, 'Iowan Old Style', serif; }
+  input, select { font-family: inherit; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: calc(32px + env(safe-area-inset-top)) 20px 80px; }
+  h1 { font-size: 26px; margin: 0; color:#1F1F19; }
+  .card { background:#FBFAF5; border:1px solid #DDD8C8; border-radius:10px; padding:20px; margin-bottom:16px; }
+  .row { display:flex; gap:16px; flex-wrap:wrap; align-items:flex-end; }
+  .field { display:flex; flex-direction:column; gap:5px; }
+  .field-label { font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:#8A6D3B; font-weight:700; }
+  .numwrap { display:flex; align-items:center; gap:6px; }
+  input[type=number], input[type=text] {
+    font-size:15px; padding:8px 10px; border:1px solid #DDD8C8; border-radius:6px; background:#fff; color:#2E2E27;
+  }
+  select { padding:6px 8px; border:1px solid #DDD8C8; border-radius:6px; background:#fff; color:#2E2E27; }
+  .suffix { font-size:13px; color:#8A6D3B; }
+  .btn { cursor:pointer; border:none; border-radius:7px; font-weight:600; padding:10px 16px; font-size:14px; transition:opacity .15s; }
+  .btn:hover { opacity:.85; }
+  .btn:active { opacity:.7; }
+  .btn-teal { background:#2C5F5D; color:#fff; }
+  .btn-gold { background:#D4A017; color:#2E2E27; padding:7px 12px; font-size:13px; display:inline-flex; align-items:center; gap:5px; }
+  .btn-ghost-teal { background:transparent; color:#2C5F5D; border:1px dashed #2C5F5D; padding:6px 12px; font-size:13px; display:inline-flex; align-items:center; gap:5px; }
+  .btn-link { background:transparent; color:#8A6D3B; padding:7px 8px; font-size:13px; display:inline-flex; align-items:center; gap:5px; }
+  .del-btn { background:none; border:none; cursor:pointer; color:#B23A2F; }
+  .meal-header { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px; }
+  .meal-title-input { font-size:19px; border:none; background:transparent; font-weight:700; color:#1F1F19; padding:0; width:160px; }
+  .item-row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; padding:6px 8px; border-radius:6px; }
+  .item-row select { flex:1 1 180px; }
+  .add-item-row { margin-top:8px; }
+  .result-box { margin-top:14px; border-top:1px solid #EDEAE0; padding-top:12px; font-size:13.5px; color:#4A4A40; }
+  .foods-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+  .foods-title { font-size:19px; }
+  .add-food-form { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px; padding:12px; background:#F2F0E6; border-radius:8px; }
+  .foods-table { display:grid; grid-template-columns: 1fr auto auto auto auto; gap:4px 14px; font-size:14px; width:100%; }
+  .foods-table .th { font-weight:700; color:#8A6D3B; font-size:12px; text-transform:uppercase; }
+  .foods-table .cell { padding:6px 0; border-top:1px solid #EDEAE0; }
+  .save-status { font-size:13px; align-self:center; }
+  .save-err { margin-top:10px; font-size:12px; color:#B23A2F; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div style="margin-bottom:20px;">
+    <h1 class="disp">Калькулятор порций</h1>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <div class="field">
+        <span class="field-label">Калорий в день</span>
+        <div class="numwrap"><input type="number" id="dayKcal" style="width:90px;"><span class="suffix">ккал</span></div>
+      </div>
+      <div class="field">
+        <span class="field-label">Белка в день</span>
+        <div class="numwrap"><input type="number" id="dayProtein" style="width:90px;"><span class="suffix">г</span></div>
+      </div>
+      <div class="field">
+        <span class="field-label">Приёмов пищи</span>
+        <div class="numwrap"><input type="number" id="mealCount" min="1" max="8" style="width:90px;"></div>
+      </div>
+      <button class="btn btn-teal" id="splitBtn">Разделить поровну</button>
+    </div>
+    <div id="dayTotals" style="margin-top:14px; font-size:13px; color:#6B6A5E;"></div>
+  </div>
+
+  <div id="meals"></div>
+
+  <div class="card">
+    <div class="foods-head">
+      <div class="disp foods-title">Продукты (на 100 г, если не указано иное)</div>
+      <div>
+        <button class="btn btn-gold" id="toggleAddFood">+ Продукт</button>
+        <button class="btn btn-link" id="resetFoodsBtn" title="Сбросить к списку по умолчанию">↺ Сброс</button>
+      </div>
+    </div>
+    <div class="add-food-form" id="addFoodForm" style="display:none;">
+      <input type="text" id="newFoodName" placeholder="Название" style="flex:1 1 160px;">
+      <input type="number" id="newFoodKcal" placeholder="ккал/100г" style="width:110px;">
+      <input type="number" id="newFoodP" placeholder="белок/100г" style="width:110px;">
+      <input type="number" id="newFoodCarbs" placeholder="углеводы/100г" style="width:130px;">
+      <button class="btn btn-teal" id="addFoodBtn">Добавить</button>
+      <span class="save-status" id="saveStatus"></span>
+    </div>
+    <div class="foods-table" id="foodsTable"></div>
+    <div class="save-err" id="saveErr" style="display:none;">Не получилось сохранить список продуктов — изменения останутся только в этой сессии.</div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'portioncalc-foods-v1';
+const MEALS_KEY = 'portioncalc-meals-v1';
+const DAY_KEY = 'portioncalc-day-v1';
+
+const DEFAULT_FOODS = [
+  { id:"eggs", name:"Яйцо", perUnit:true, unitG:55, kcal100:143, p100:12.6, carbs100:1.1 },
+  { id:"lavash", name:"Лаваш", perUnit:false, kcal100:275, p100:9.0, carbs100:54.0 },
+  { id:"labneh", name:"Лабне (сирийское)", perUnit:false, kcal100:130, p100:8.0, carbs100:4.0 },
+  { id:"oliveoil", name:"Оливковое масло", perUnit:false, kcal100:884, p100:0, carbs100:0 },
+  { id:"sunfloweroil", name:"Подсолнечное масло", perUnit:false, kcal100:884, p100:0, carbs100:0 },
+  { id:"butter", name:"Сливочное масло", perUnit:false, kcal100:748, p100:0.5, carbs100:0.1 },
+  { id:"peanuts_raw", name:"Арахис (сырой, орехи)", perUnit:false, kcal100:567, p100:25.8, carbs100:16.0 },
+  { id:"milk", name:"Молоко 3.2%", perUnit:false, kcal100:60, p100:3.0, carbs100:4.8 },
+  { id:"oats", name:"Овсянка (сухая)", perUnit:false, kcal100:380, p100:13.0, carbs100:66.0 },
+  { id:"banana", name:"Банан", perUnit:false, kcal100:89, p100:1.1, carbs100:23.0 },
+  { id:"pnut", name:"Арахисовая паста", perUnit:false, kcal100:590, p100:25.0, carbs100:20.0 },
+  { id:"rice", name:"Рис (сухой)", perUnit:false, kcal100:365, p100:7.0, carbs100:80.0 },
+  { id:"bulgur", name:"Булгур (сухой)", perUnit:false, kcal100:342, p100:12.3, carbs100:76.0 },
+  { id:"pasta", name:"Макароны (сухие)", perUnit:false, kcal100:350, p100:12.0, carbs100:75.0 },
+  { id:"pasta_cooked", name:"Макароны (варёные)", perUnit:false, kcal100:158, p100:5.5, carbs100:31.0 },
+  { id:"potato", name:"Картофель (сырой)", perUnit:false, kcal100:77, p100:2.0, carbs100:17.0 },
+  { id:"potato_cooked", name:"Картофель (варёный)", perUnit:false, kcal100:87, p100:2.0, carbs100:20.0 },
+  { id:"chicken", name:"Куриная грудка (сырая)", perUnit:false, kcal100:120, p100:22.5, carbs100:0 },
+  { id:"lentils", name:"Чечевица (сухая)", perUnit:false, kcal100:350, p100:25.0, carbs100:60.0 },
+  { id:"chickpeas", name:"Нут (готовый)", perUnit:false, kcal100:164, p100:8.9, carbs100:27.0 },
+  { id:"tahini", name:"Тахини", perUnit:false, kcal100:595, p100:17.0, carbs100:21.0 },
+  { id:"yogurt", name:"Йогурт греческий 5%", perUnit:false, kcal100:97, p100:9.0, carbs100:4.0 },
+  { id:"cheese_brynza", name:"Сыр (брынза)", perUnit:false, kcal100:260, p100:17.0, carbs100:4.0 },
+];
+
+let foods = [];
+let meals = [];
+let dayKcal = 2600;
+let dayProtein = 100;
+let mealCount = 4;
+
+function uid(){ return Math.random().toString(36).slice(2,9); }
+function round(n, d=0){ const f=Math.pow(10,d); return Math.round(n*f)/f; }
+
+// ---------- persistence ----------
+function loadFoods(){
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw){ const parsed = JSON.parse(raw); if (Array.isArray(parsed) && parsed.length) return parsed; }
+  } catch(e){}
+  return DEFAULT_FOODS.slice();
+}
+function saveFoods(showStatus){
+  const statusEl = document.getElementById('saveStatus');
+  const errEl = document.getElementById('saveErr');
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(foods));
+    errEl.style.display = 'none';
+    if (showStatus && statusEl){
+      statusEl.textContent = '✓ сохранено'; statusEl.style.color = '#2C5F5D';
+      setTimeout(()=>{ if (statusEl.textContent==='✓ сохранено') statusEl.textContent=''; }, 2000);
+    }
+  } catch(e) {
+    errEl.style.display = 'block';
+    if (showStatus && statusEl){ statusEl.textContent = 'не сохранилось'; statusEl.style.color = '#B23A2F'; }
+  }
+}
+function loadMeals(){
+  try { const raw = localStorage.getItem(MEALS_KEY); if (raw) return JSON.parse(raw); } catch(e){}
+  return null;
+}
+function saveMeals(){ try { localStorage.setItem(MEALS_KEY, JSON.stringify(meals)); } catch(e){} }
+function loadDay(){
+  try { const raw = localStorage.getItem(DAY_KEY); if (raw) return JSON.parse(raw); } catch(e){}
+  return null;
+}
+function saveDay(){ try { localStorage.setItem(DAY_KEY, JSON.stringify({dayKcal, dayProtein, mealCount})); } catch(e){} }
+
+// ---------- calculation ----------
+function findFood(id){ return foods.find(f=>f.id===id); }
+function perGramStats(food){
+  if (food.perUnit) return { kcalPerAmount:(food.kcal100/100)*food.unitG, pPerAmount:(food.p100/100)*food.unitG, cPerAmount:((food.carbs100||0)/100)*food.unitG, unitLabel:"шт" };
+  return { kcalPerAmount: food.kcal100/100, pPerAmount: food.p100/100, cPerAmount:(food.carbs100||0)/100, unitLabel:"г" };
+}
+function computeMeal(meal){
+  let totalKcal=0, totalP=0, totalC=0;
+  meal.items.forEach(it=>{
+    const food = findFood(it.foodId); if(!food) return;
+    const s = perGramStats(food);
+    totalKcal += s.kcalPerAmount*it.amount;
+    totalP += s.pPerAmount*it.amount;
+    totalC += s.cPerAmount*it.amount;
+  });
+  return { totalKcal, totalP, totalC };
+}
+
+// ---------- number input helper (empty-while-typing behavior) ----------
+// applies to any <input type=number> with data-numfield="1": stores raw string state,
+// commits value on valid parse, allows empty field, resets to committed value on blur if invalid
+function wireNumInput(el, getValue, onCommit){
+  el.value = (getValue() === 0 || getValue()) ? String(getValue()) : "";
+  el.addEventListener('input', e=>{
+    const v = e.target.value;
+    if (v === "" || v === "-" || v === ".") return;
+    const num = parseFloat(v);
+    if (!isNaN(num)) onCommit(num);
+  });
+  el.addEventListener('blur', e=>{
+    if (e.target.value === "" || isNaN(parseFloat(e.target.value))) {
+      e.target.value = String(getValue() ?? 0);
+    }
+  });
+}
+
+// ---------- rendering ----------
+function foodOptionsHtml(selectedId){
+  return foods.map(f=>`<option value="${f.id}" ${f.id===selectedId?'selected':''}>${f.name}</option>`).join('');
+}
+
+function renderDayTotals(){
+  let kcalSum=0, pSum=0, cSum=0;
+  meals.forEach(m=>{ const r = computeMeal(m); kcalSum+=r.totalKcal; pSum+=r.totalP; cSum+=r.totalC; });
+  const minCarbs = round(dayKcal*0.4/4);
+  const comfortCarbs = round(dayKcal*0.5/4);
+  const carbsOk = cSum >= minCarbs;
+  const el = document.getElementById('dayTotals');
+  el.innerHTML = `Факт по всем приёмам: <b style="color:${kcalSum?'#1F1F19':'#999'}">${round(kcalSum)} ккал</b>` +
+    `  ·  <b style="color:${pSum?'#1F1F19':'#999'}">${round(pSum,1)} г белка</b>` +
+    `  ·  <b style="color:${carbsOk?'#2C5F5D':'#B23A2F'}">${round(cSum,1)} г углеводов</b>` +
+    `  (цель: ${dayKcal} ккал / ${dayProtein} г белка)` +
+    `<div style="margin-top:6px; font-size:12.5px; color:#8A6D3B;">Минимум углеводов для тренировок при ${dayKcal} ккал: <b>${minCarbs} г</b> (40% калорий) · комфортный уровень: <b>${comfortCarbs} г</b> (50%)` +
+    (cSum > 0 ? ` <span style="margin-left:6px; font-weight:700; color:${carbsOk?'#2C5F5D':'#B23A2F'};">${carbsOk?'✓ в норме':'ниже минимума'}</span>` : '') +
+    `</div>`;
+}
+
+function renderMeals(){
+  const container = document.getElementById('meals');
+  container.innerHTML = '';
+  meals.forEach(meal=>{
+    const result = computeMeal(meal);
+    const div = document.createElement('div');
+    div.className = 'card';
+
+    let itemsHtml = '';
+    meal.items.forEach(it=>{
+      const food = findFood(it.foodId);
+      itemsHtml += `
+        <div class="item-row">
+          <select data-meal="${meal.id}" data-item="${it.id}" class="itemFoodSel">${foodOptionsHtml(it.foodId)}</select>
+          <div class="numwrap">
+            <input type="number" class="itemAmount" data-meal="${meal.id}" data-item="${it.id}" style="width:70px;">
+            <span class="suffix">${food && food.perUnit ? 'шт' : 'г'}</span>
+          </div>
+          <button class="del-btn itemDel" data-meal="${meal.id}" data-item="${it.id}" style="margin-left:auto;">✕</button>
+        </div>`;
+    });
+
+    div.innerHTML = `
+      <div class="meal-header">
+        <input class="disp meal-title-input mealLabel" data-meal="${meal.id}" value="${meal.label}">
+        <div style="display:flex; gap:12px; align-items:center;">
+          <div class="field">
+            <span class="field-label">Цель, ккал</span>
+            <div class="numwrap"><input type="number" class="mealTargetKcal" data-meal="${meal.id}" style="width:90px;"></div>
+          </div>
+          <div class="field">
+            <span class="field-label">Цель, белок г</span>
+            <div class="numwrap"><input type="number" class="mealTargetProtein" data-meal="${meal.id}" style="width:90px;"></div>
+          </div>
+        </div>
+      </div>
+      <div class="items-wrap" style="display:flex; flex-direction:column; gap:8px;">${itemsHtml}</div>
+      <button class="btn btn-ghost-teal add-item-row addItemBtn" data-meal="${meal.id}">+ Продукт</button>
+      <div class="result-box">
+        Итого по приёму: <b>${round(result.totalKcal)} ккал</b> · <b>${round(result.totalP,1)} г белка</b> · <b>${round(result.totalC,1)} г углеводов</b>
+        <span class="suffix">(цель ${meal.targetKcal} / ${meal.targetProtein})</span>
+      </div>
+    `;
+    container.appendChild(div);
+
+    // wire number inputs for this meal
+    div.querySelectorAll('.itemAmount').forEach(el=>{
+      const item = meal.items.find(i=>i.id===el.dataset.item);
+      wireNumInput(el, ()=>item.amount, (v)=>{ item.amount=v; saveMeals(); refreshTotalsOnly(); });
+    });
+    const kcalEl = div.querySelector('.mealTargetKcal');
+    wireNumInput(kcalEl, ()=>meal.targetKcal, (v)=>{ meal.targetKcal=v; saveMeals(); refreshTotalsOnly(); });
+    const pEl = div.querySelector('.mealTargetProtein');
+    wireNumInput(pEl, ()=>meal.targetProtein, (v)=>{ meal.targetProtein=v; saveMeals(); refreshTotalsOnly(); });
+  });
+
+  attachMealHandlers();
+  renderDayTotals();
+}
+
+// lighter refresh: just recompute the totals text without rebuilding inputs (keeps focus while typing)
+function refreshTotalsOnly(){
+  document.querySelectorAll('#meals .card').forEach((card, idx)=>{
+    const meal = meals[idx];
+    if (!meal) return;
+    const result = computeMeal(meal);
+    const box = card.querySelector('.result-box');
+    if (box){
+      box.innerHTML = `Итого по приёму: <b>${round(result.totalKcal)} ккал</b> · <b>${round(result.totalP,1)} г белка</b> · <b>${round(result.totalC,1)} г углеводов</b> <span class="suffix">(цель ${meal.targetKcal} / ${meal.targetProtein})</span>`;
+    }
+  });
+  renderDayTotals();
+}
+
+function attachMealHandlers(){
+  document.querySelectorAll('.itemFoodSel').forEach(el=>{
+    el.addEventListener('change', e=>{
+      const meal = meals.find(m=>m.id===e.target.dataset.meal);
+      const item = meal.items.find(i=>i.id===e.target.dataset.item);
+      item.foodId = e.target.value;
+      saveMeals(); renderMeals();
+    });
+  });
+  document.querySelectorAll('.itemDel').forEach(el=>{
+    el.addEventListener('click', e=>{
+      const meal = meals.find(m=>m.id===e.target.dataset.meal);
+      meal.items = meal.items.filter(i=>i.id!==e.target.dataset.item);
+      saveMeals(); renderMeals();
+    });
+  });
+  document.querySelectorAll('.addItemBtn').forEach(el=>{
+    el.addEventListener('click', e=>{
+      const meal = meals.find(m=>m.id===e.target.dataset.meal);
+      const usedIds = new Set(meal.items.map(i=>i.foodId));
+      const firstFree = foods.find(f=>!usedIds.has(f.id)) || foods[0];
+      meal.items.push({ id:uid(), foodId:firstFree.id, amount: firstFree.perUnit?1:100 });
+      saveMeals(); renderMeals();
+    });
+  });
+  document.querySelectorAll('.mealLabel').forEach(el=>{
+    el.addEventListener('input', e=>{
+      const meal = meals.find(m=>m.id===e.target.dataset.meal);
+      meal.label = e.target.value; saveMeals();
+    });
+  });
+}
+
+function renderFoodsTable(){
+  const el = document.getElementById('foodsTable');
+  let html = `<div class="th">Продукт</div><div class="th">Ккал</div><div class="th">Белок</div><div class="th">Углев.</div><div></div>`;
+  foods.forEach(f=>{
+    html += `
+      <div class="cell">${f.name}</div>
+      <div class="cell">${f.kcal100}${f.perUnit?'/100г':''}</div>
+      <div class="cell">${f.p100} г</div>
+      <div class="cell">${f.carbs100 ?? 0} г</div>
+      <div class="cell"><button class="del-btn foodDel" data-id="${f.id}" title="Удалить">✕</button></div>`;
+  });
+  el.innerHTML = html;
+  el.querySelectorAll('.foodDel').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      foods = foods.filter(f=>f.id!==e.target.dataset.id);
+      saveFoods(false); renderFoodsTable(); renderMeals();
+    });
+  });
+}
+
+function initMeals(){
+  const saved = loadMeals();
+  if (saved && Array.isArray(saved) && saved.length === mealCount){
+    meals = saved;
+  } else {
+    const prev = saved || [];
+    const next = [];
+    for (let i=0;i<mealCount;i++){
+      if (prev[i]) next.push(prev[i]);
+      else next.push({ id:uid(), label:`Приём ${i+1}`, targetKcal: round(dayKcal/mealCount), targetProtein: round(dayProtein/mealCount), items: [] });
+    }
+    meals = next;
+    saveMeals();
+  }
+}
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  foods = loadFoods();
+  const savedDay = loadDay();
+  if (savedDay){ dayKcal = savedDay.dayKcal; dayProtein = savedDay.dayProtein; mealCount = savedDay.mealCount; }
+
+  document.getElementById('dayKcal').value = dayKcal;
+  document.getElementById('dayProtein').value = dayProtein;
+  document.getElementById('mealCount').value = mealCount;
+
+  wireNumInput(document.getElementById('dayKcal'), ()=>dayKcal, v=>{ dayKcal=v; saveDay(); renderDayTotals(); });
+  wireNumInput(document.getElementById('dayProtein'), ()=>dayProtein, v=>{ dayProtein=v; saveDay(); renderDayTotals(); });
+  wireNumInput(document.getElementById('mealCount'), ()=>mealCount, v=>{
+    mealCount = Math.max(1, Math.min(8, Math.round(v)));
+    document.getElementById('mealCount').value = mealCount;
+    saveDay(); initMeals(); renderMeals();
+  });
+
+  initMeals();
+  renderFoodsTable();
+  renderMeals();
+
+  document.getElementById('splitBtn').addEventListener('click', ()=>{
+    const perKcal = round(dayKcal/meals.length);
+    const perP = round(dayProtein/meals.length);
+    meals.forEach(m=>{ m.targetKcal = perKcal; m.targetProtein = perP; });
+    saveMeals(); renderMeals();
+  });
+
+  document.getElementById('toggleAddFood').addEventListener('click', ()=>{
+    const f = document.getElementById('addFoodForm');
+    f.style.display = f.style.display==='none' ? 'flex' : 'none';
+  });
+
+  document.getElementById('addFoodBtn').addEventListener('click', ()=>{
+    const name = document.getElementById('newFoodName').value.trim();
+    const kcal = parseFloat(document.getElementById('newFoodKcal').value);
+    const p = parseFloat(document.getElementById('newFoodP').value);
+    const c = parseFloat(document.getElementById('newFoodCarbs').value);
+    if (!name || isNaN(kcal) || isNaN(p) || isNaN(c)) return;
+    foods.push({ id:uid(), name, perUnit:false, kcal100:kcal, p100:p, carbs100:c });
+    saveFoods(true);
+    document.getElementById('newFoodName').value = '';
+    document.getElementById('newFoodKcal').value = '';
+    document.getElementById('newFoodP').value = '';
+    document.getElementById('newFoodCarbs').value = '';
+    renderFoodsTable(); renderMeals();
+    setTimeout(()=>{ document.getElementById('addFoodForm').style.display = 'none'; }, 600);
+  });
+
+  document.getElementById('resetFoodsBtn').addEventListener('click', ()=>{
+    foods = DEFAULT_FOODS.slice();
+    saveFoods(false); renderFoodsTable(); renderMeals();
+  });
+});
+</script>
+</body>
+</html>
