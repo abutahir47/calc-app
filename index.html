@@ -2,19 +2,14 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Калькулятор порций</title>
-<!-- PWA: делает приложение полноэкранным при добавлении на домашний экран iPhone -->
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Калькулятор">
-<link rel="apple-touch-icon" href="icon.png">
 <style>
   * { box-sizing: border-box; }
   body { margin:0; background:#F2F0E6; color:#2E2E27; font-family: 'Segoe UI', system-ui, sans-serif; }
   .disp { font-family: Georgia, 'Iowan Old Style', serif; }
   input, select { font-family: inherit; }
-  .wrap { max-width: 880px; margin: 0 auto; padding: calc(32px + env(safe-area-inset-top)) 20px 80px; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 32px 20px 80px; }
   h1 { font-size: 26px; margin: 0; color:#1F1F19; }
   .card { background:#FBFAF5; border:1px solid #DDD8C8; border-radius:10px; padding:20px; margin-bottom:16px; }
   .row { display:flex; gap:16px; flex-wrap:wrap; align-items:flex-end; }
@@ -71,11 +66,8 @@
         <div class="numwrap"><input type="number" id="mealCount" min="1" max="8" style="width:90px;"></div>
       </div>
       <button class="btn btn-teal" id="splitBtn">Разделить поровну</button>
-      <button class="btn btn-gold" id="shareBtn">⤴ Поделиться</button>
-      <button class="btn btn-link" id="resetAllBtn">↺ Сбросить всё</button>
     </div>
     <div id="dayTotals" style="margin-top:14px; font-size:13px; color:#6B6A5E;"></div>
-    <div id="shareStatus" style="margin-top:6px; font-size:13px; color:#2C5F5D;"></div>
   </div>
 
   <div id="meals"></div>
@@ -99,6 +91,17 @@
     <div class="foods-table" id="foodsTable"></div>
     <div class="save-err" id="saveErr" style="display:none;">Не получилось сохранить список продуктов — изменения останутся только в этой сессии.</div>
   </div>
+
+  <div class="card">
+    <div class="foods-title disp" style="margin-bottom:12px;">Экспорт рациона</div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <button class="btn btn-teal" id="printBtn">🖨 Печать / сохранить как PDF</button>
+      <button class="btn btn-gold" id="downloadTxtBtn">⬇ Скачать как текст</button>
+      <button class="btn btn-link" id="toggleTextView">Показать текст</button>
+    </div>
+    <textarea id="exportTextArea" readonly style="display:none; width:100%; margin-top:12px; min-height:260px; padding:12px; border:1px solid #DDD8C8; border-radius:8px; font-family: 'Courier New', monospace; font-size:13px; background:#fff; color:#2E2E27;"></textarea>
+    <div style="margin-top:8px; font-size:12px; color:#8A6D3B;">Если кнопки печати/скачивания не сработают в этом просмотрщике — нажми «Показать текст» и скопируй вручную.</div>
+  </div>
 </div>
 
 <script>
@@ -115,17 +118,17 @@ const DEFAULT_FOODS = [
   { id:"butter", name:"Сливочное масло", perUnit:false, kcal100:748, p100:0.5, carbs100:0.1 },
   { id:"peanuts_raw", name:"Арахис (сырой, орехи)", perUnit:false, kcal100:567, p100:25.8, carbs100:16.0 },
   { id:"milk", name:"Молоко 3.2%", perUnit:false, kcal100:60, p100:3.0, carbs100:4.8 },
-  { id:"oats", name:"Овсянка (сухая)", perUnit:false, kcal100:380, p100:13.0, carbs100:66.0 },
   { id:"banana", name:"Банан", perUnit:false, kcal100:89, p100:1.1, carbs100:23.0 },
   { id:"pnut", name:"Арахисовая паста", perUnit:false, kcal100:590, p100:25.0, carbs100:20.0 },
-  { id:"rice", name:"Рис (сухой)", perUnit:false, kcal100:365, p100:7.0, carbs100:80.0 },
-  { id:"bulgur", name:"Булгур (сухой)", perUnit:false, kcal100:342, p100:12.3, carbs100:76.0 },
-  { id:"pasta", name:"Макароны (сухие)", perUnit:false, kcal100:350, p100:12.0, carbs100:75.0 },
+  { id:"rice_cooked", name:"Рис (готовый)", perUnit:false, kcal100:130, p100:2.7, carbs100:28.0 },
+  { id:"bulgur_cooked", name:"Булгур (готовый)", perUnit:false, kcal100:83, p100:3.1, carbs100:18.6 },
+  { id:"meatballs_chicken", name:"Тефтели куриные (домашний рецепт)", perUnit:false, kcal100:165, p100:18.0, carbs100:4.8 },
   { id:"pasta_cooked", name:"Макароны (варёные)", perUnit:false, kcal100:158, p100:5.5, carbs100:31.0 },
   { id:"potato", name:"Картофель (сырой)", perUnit:false, kcal100:77, p100:2.0, carbs100:17.0 },
   { id:"potato_cooked", name:"Картофель (варёный)", perUnit:false, kcal100:87, p100:2.0, carbs100:20.0 },
   { id:"chicken", name:"Куриная грудка (сырая)", perUnit:false, kcal100:120, p100:22.5, carbs100:0 },
-  { id:"lentils", name:"Чечевица (сухая)", perUnit:false, kcal100:350, p100:25.0, carbs100:60.0 },
+  { id:"chicken_cooked", name:"Куриная грудка (готовая)", perUnit:false, kcal100:165, p100:31.0, carbs100:0 },
+  { id:"lentils_cooked", name:"Чечевица (готовая)", perUnit:false, kcal100:116, p100:9.0, carbs100:20.0 },
   { id:"chickpeas", name:"Нут (готовый)", perUnit:false, kcal100:164, p100:8.9, carbs100:27.0 },
   { id:"tahini", name:"Тахини", perUnit:false, kcal100:595, p100:17.0, carbs100:21.0 },
   { id:"yogurt", name:"Йогурт греческий 5%", perUnit:false, kcal100:97, p100:9.0, carbs100:4.0 },
@@ -209,54 +212,6 @@ function wireNumInput(el, getValue, onCommit){
       e.target.value = String(getValue() ?? 0);
     }
   });
-}
-
-// ---------- export / share ----------
-function buildShareText(){
-  let lines = [];
-  lines.push(`Раскладка на день (${dayKcal} ккал / ${dayProtein} г белка)`);
-  lines.push('');
-  let kcalSum=0, pSum=0, cSum=0;
-  meals.forEach(meal=>{
-    const r = computeMeal(meal);
-    kcalSum += r.totalKcal; pSum += r.totalP; cSum += r.totalC;
-    lines.push(`${meal.label} (цель ${meal.targetKcal} ккал / ${meal.targetProtein} г белка)`);
-    if (meal.items.length === 0){
-      lines.push('  — пусто —');
-    } else {
-      meal.items.forEach(it=>{
-        const food = findFood(it.foodId);
-        if (!food) return;
-        const unit = food.perUnit ? 'шт' : 'г';
-        lines.push(`  - ${food.name}: ${it.amount} ${unit}`);
-      });
-    }
-    lines.push(`  Итого: ${round(r.totalKcal)} ккал · ${round(r.totalP,1)} г белка · ${round(r.totalC,1)} г углеводов`);
-    lines.push('');
-  });
-  lines.push(`Итого за день: ${round(kcalSum)} ккал · ${round(pSum,1)} г белка · ${round(cSum,1)} г углеводов`);
-  return lines.join('\n');
-}
-
-async function shareOrCopy(){
-  const text = buildShareText();
-  const statusEl = document.getElementById('shareStatus');
-  if (navigator.share){
-    try {
-      await navigator.share({ text, title: 'Раскладка на день' });
-      return;
-    } catch(e){
-      // user cancelled or share failed — fall through to clipboard
-      if (e && e.name === 'AbortError') return;
-    }
-  }
-  try {
-    await navigator.clipboard.writeText(text);
-    statusEl.textContent = '✓ скопировано в буфер обмена';
-    setTimeout(()=>{ if (statusEl.textContent === '✓ скопировано в буфер обмена') statusEl.textContent=''; }, 2500);
-  } catch(e){
-    statusEl.textContent = 'Не получилось скопировать — выделите текст вручную';
-  }
 }
 
 // ---------- rendering ----------
@@ -451,24 +406,6 @@ document.addEventListener('DOMContentLoaded', ()=>{
     saveMeals(); renderMeals();
   });
 
-  document.getElementById('shareBtn').addEventListener('click', shareOrCopy);
-
-  document.getElementById('resetAllBtn').addEventListener('click', ()=>{
-    const ok = confirm('Сбросить все приёмы пищи, граммовки и дневные цели? Список продуктов при этом не тронется.');
-    if (!ok) return;
-    try {
-      localStorage.removeItem(MEALS_KEY);
-      localStorage.removeItem(DAY_KEY);
-    } catch(e){}
-    dayKcal = 2600; dayProtein = 100; mealCount = 4;
-    document.getElementById('dayKcal').value = dayKcal;
-    document.getElementById('dayProtein').value = dayProtein;
-    document.getElementById('mealCount').value = mealCount;
-    meals = [];
-    initMeals();
-    renderMeals();
-  });
-
   document.getElementById('toggleAddFood').addEventListener('click', ()=>{
     const f = document.getElementById('addFoodForm');
     f.style.display = f.style.display==='none' ? 'flex' : 'none';
@@ -493,6 +430,70 @@ document.addEventListener('DOMContentLoaded', ()=>{
   document.getElementById('resetFoodsBtn').addEventListener('click', ()=>{
     foods = DEFAULT_FOODS.slice();
     saveFoods(false); renderFoodsTable(); renderMeals();
+  });
+
+  // ---------- export ----------
+  function buildExportText(){
+    const minCarbs = round(dayKcal*0.4/4);
+    const comfortCarbs = round(dayKcal*0.5/4);
+    let kcalSum=0, pSum=0, cSum=0;
+    let lines = [];
+    lines.push('РАЦИОН ПИТАНИЯ');
+    lines.push('Цель на день: ' + dayKcal + ' ккал, ' + dayProtein + ' г белка');
+    lines.push('');
+    meals.forEach(meal=>{
+      const r = computeMeal(meal);
+      kcalSum += r.totalKcal; pSum += r.totalP; cSum += r.totalC;
+      lines.push(meal.label + ' (цель: ' + meal.targetKcal + ' ккал, ' + meal.targetProtein + ' г белка)');
+      meal.items.forEach(it=>{
+        const food = findFood(it.foodId);
+        if (!food) return;
+        const unit = food.perUnit ? 'шт' : 'г';
+        lines.push('  - ' + food.name + ' — ' + it.amount + ' ' + unit);
+      });
+      lines.push('  Итого: ' + round(r.totalKcal) + ' ккал, ' + round(r.totalP,1) + ' г белка, ' + round(r.totalC,1) + ' г углеводов');
+      lines.push('');
+    });
+    lines.push('ИТОГО ЗА ДЕНЬ: ' + round(kcalSum) + ' ккал, ' + round(pSum,1) + ' г белка, ' + round(cSum,1) + ' г углеводов');
+    lines.push('Минимум углеводов для тренировок: ' + minCarbs + ' г (40% калорий), комфортный уровень: ' + comfortCarbs + ' г (50%)');
+    lines.push(cSum >= minCarbs ? '✓ углеводы в норме' : 'углеводы ниже минимума');
+    return lines.join('\n');
+  }
+
+  document.getElementById('printBtn').addEventListener('click', ()=>{
+    const text = buildExportText();
+    const w = window.open('', '_blank');
+    if (!w){ alert('Не удалось открыть окно печати — возможно, всплывающие окна заблокированы в этом просмотрщике. Используй «Скачать как текст» вместо этого.'); return; }
+    const escaped = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    w.document.write('<html><head><title>Рацион питания</title><style>body{font-family:Georgia,serif;white-space:pre-wrap;padding:24px;font-size:14px;line-height:1.5;color:#1F1F19;}</style></head><body>' + escaped + '</body></html>');
+    w.document.close();
+    w.focus();
+    setTimeout(()=>{ w.print(); }, 300);
+  });
+
+  document.getElementById('downloadTxtBtn').addEventListener('click', ()=>{
+    try {
+      const text = buildExportText();
+      const blob = new Blob([text], {type:'text/plain;charset=utf-8'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'racion.txt';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch(e){
+      alert('Скачивание не сработало в этом просмотрщике — используй «Показать текст» и скопируй вручную.');
+    }
+  });
+
+  document.getElementById('toggleTextView').addEventListener('click', ()=>{
+    const ta = document.getElementById('exportTextArea');
+    if (ta.style.display === 'none'){
+      ta.value = buildExportText();
+      ta.style.display = 'block';
+      ta.focus(); ta.select();
+    } else {
+      ta.style.display = 'none';
+    }
   });
 });
 </script>
