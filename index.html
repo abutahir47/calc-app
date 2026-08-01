@@ -66,6 +66,7 @@
         <div class="numwrap"><input type="number" id="mealCount" min="1" max="8" style="width:90px;"></div>
       </div>
       <button class="btn btn-teal" id="splitBtn">Разделить поровну</button>
+      <button class="btn" id="resetCalcBtn" style="background:transparent;color:#B23A2F;border:1px solid #B23A2F;">↺ Сбросить расчёт</button>
     </div>
     <div id="dayTotals" style="margin-top:14px; font-size:13px; color:#6B6A5E;"></div>
   </div>
@@ -97,6 +98,7 @@
     <div style="display:flex; gap:10px; flex-wrap:wrap;">
       <button class="btn btn-teal" id="printBtn">🖨 Печать / сохранить как PDF</button>
       <button class="btn btn-gold" id="downloadTxtBtn">⬇ Скачать как текст</button>
+      <button class="btn btn-gold" id="shareBtn">📤 Поделиться</button>
       <button class="btn btn-link" id="toggleTextView">Показать текст</button>
     </div>
     <textarea id="exportTextArea" readonly style="display:none; width:100%; margin-top:12px; min-height:260px; padding:12px; border:1px solid #DDD8C8; border-radius:8px; font-family: 'Courier New', monospace; font-size:13px; background:#fff; color:#2E2E27;"></textarea>
@@ -118,6 +120,7 @@ const DEFAULT_FOODS = [
   { id:"butter", name:"Сливочное масло", perUnit:false, kcal100:748, p100:0.5, carbs100:0.1 },
   { id:"peanuts_raw", name:"Арахис (сырой, орехи)", perUnit:false, kcal100:567, p100:25.8, carbs100:16.0 },
   { id:"milk", name:"Молоко 3.2%", perUnit:false, kcal100:60, p100:3.0, carbs100:4.8 },
+  { id:"oats", name:"Овсянка (сухая)", perUnit:false, kcal100:380, p100:13.0, carbs100:66.0 },
   { id:"banana", name:"Банан", perUnit:false, kcal100:89, p100:1.1, carbs100:23.0 },
   { id:"pnut", name:"Арахисовая паста", perUnit:false, kcal100:590, p100:25.0, carbs100:20.0 },
   { id:"rice_cooked", name:"Рис (готовый)", perUnit:false, kcal100:130, p100:2.7, carbs100:28.0 },
@@ -404,6 +407,21 @@ document.addEventListener('DOMContentLoaded', ()=>{
     saveMeals(); renderMeals();
   });
 
+  document.getElementById('resetCalcBtn').addEventListener('click', ()=>{
+    if (!confirm('Сбросить весь текущий расчёт (цели на день и все приёмы пищи) и начать новый рацион?')) return;
+    dayKcal = 2600; dayProtein = 100; mealCount = 4;
+    document.getElementById('dayKcal').value = dayKcal;
+    document.getElementById('dayProtein').value = dayProtein;
+    document.getElementById('mealCount').value = mealCount;
+    saveDay();
+    meals = [];
+    for (let i=0;i<mealCount;i++){
+      meals.push({ id:uid(), label:`Приём ${i+1}`, targetKcal: round(dayKcal/mealCount), targetProtein: round(dayProtein/mealCount), items: [] });
+    }
+    saveMeals();
+    renderMeals();
+  });
+
   document.getElementById('toggleAddFood').addEventListener('click', ()=>{
     const f = document.getElementById('addFoodForm');
     f.style.display = f.style.display==='none' ? 'flex' : 'none';
@@ -491,6 +509,19 @@ document.addEventListener('DOMContentLoaded', ()=>{
       ta.focus(); ta.select();
     } else {
       ta.style.display = 'none';
+    }
+  });
+
+  document.getElementById('shareBtn').addEventListener('click', async ()=>{
+    const text = buildExportText();
+    if (navigator.share){
+      try {
+        await navigator.share({ title: 'Рацион питания', text });
+      } catch(e) {
+        // user cancelled share sheet or it failed silently — no action needed
+      }
+    } else {
+      alert('Поделиться напрямую не поддерживается в этом просмотрщике — используй «Показать текст» и скопируй вручную, либо «Скачать как текст».');
     }
   });
 });
