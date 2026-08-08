@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Калькулятор порций</title>
- <link rel="apple-touch-icon" href="icon_180.png">
 <style>
   * { box-sizing: border-box; }
   body { margin:0; background:#F2F0E6; color:#2E2E27; font-family: 'Segoe UI', system-ui, sans-serif; }
@@ -130,10 +129,19 @@ const DEFAULT_FOODS = [
   { id:"pasta_cooked", name:"Макароны (варёные)", perUnit:false, kcal100:158, p100:5.5, carbs100:31.0 },
   { id:"potato_cooked", name:"Картофель (варёный)", perUnit:false, kcal100:87, p100:2.0, carbs100:20.0 },
   { id:"chicken_cooked", name:"Куриная грудка (готовая)", perUnit:false, kcal100:165, p100:31.0, carbs100:0 },
+  { id:"chicken_gizzards", name:"Куриные желудки (варёные)", perUnit:false, kcal100:154, p100:27.5, carbs100:1.0 },
+  { id:"chicken_liver", name:"Куриная печень (варёная)", perUnit:false, kcal100:167, p100:24.5, carbs100:0.9 },
+  { id:"liver_heart_mix", name:"Печень с сердцем (варёные, смесь)", perUnit:false, kcal100:176, p100:25.3, carbs100:0.8 },
+  { id:"olives_black", name:"Маслины чёрные (солёные)", perUnit:false, kcal100:115, p100:0.8, carbs100:6.3 },
+  { id:"tail_fat", name:"Курдючный жир", perUnit:false, kcal100:897, p100:0.5, carbs100:0 },
+  { id:"cornstarch", name:"Крахмал кукурузный (сухой)", perUnit:false, kcal100:381, p100:0.3, carbs100:91.0 },
+  { id:"kissel_ready", name:"Кисель (готовый, на крахмале)", perUnit:false, kcal100:44, p100:0, carbs100:10.5 },
+  { id:"pancakes", name:"Блинчики (домашний рецепт)", perUnit:true, unitG:31, kcal100:226, p100:7.3, carbs100:35.5 },
   { id:"lentils_cooked", name:"Чечевица (готовая)", perUnit:false, kcal100:116, p100:9.0, carbs100:20.0 },
   { id:"chickpeas", name:"Нут (готовый)", perUnit:false, kcal100:164, p100:8.9, carbs100:27.0 },
   { id:"tahini", name:"Тахини", perUnit:false, kcal100:595, p100:17.0, carbs100:21.0 },
   { id:"yogurt", name:"Йогурт греческий 5%", perUnit:false, kcal100:97, p100:9.0, carbs100:4.0 },
+  { id:"sheep_kefir", name:"Бараний кефир", perUnit:false, kcal100:120, p100:5.5, carbs100:4.5 },
   { id:"cheese_brynza", name:"Сыр (брынза)", perUnit:false, kcal100:260, p100:17.0, carbs100:4.0 },
 ];
 
